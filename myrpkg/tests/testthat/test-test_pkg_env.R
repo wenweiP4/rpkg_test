@@ -1,6 +1,6 @@
 
-assert_default_length = function() {
-  expect_identical(myrpkg::get_length(), 3L)
+assert_default_length = function(extra = 0L) {
+  expect_identical(myrpkg::get_length(), 4L + as.integer(extra))
 }
 
 test_that("default_env", {
@@ -21,11 +21,11 @@ test_that("set global side effect", {
   myrpkg::connect()
   e = myrpkg::default_env
   e$extra = 'extra'
-  expect_identical(get_length(), 4L)
+  assert_default_length(1)
 })
 
 test_that("global side effect result", {
-  expect_identical(get_length(), 4L)
+  assert_default_length(1)
 })
 
 test_that("cancel global side effect result", {

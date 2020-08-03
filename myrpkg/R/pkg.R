@@ -13,6 +13,7 @@ NULL
 connect = function(host = "localhost", user = "me", token = "my_token") {
   names = c("host", "user", "token")
   sapply(names, function(x) assign(x, get(x), envir = default_env))
+  default_env[['bob']] = Person$new("Bob", "bobbby")
   invisible(NULL)
 }
 
@@ -60,7 +61,7 @@ Person = R6::R6Class(
 #' @export
 PersonSingleton = Person$new("Alice", "alice_secrete")
 
-default_env[['bob']] = Person$new("Bob", "bobbby")
+
 
 #' @export
 get_length = function(e = default_env) {
