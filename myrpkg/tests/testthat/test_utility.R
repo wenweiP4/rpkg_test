@@ -1,78 +1,102 @@
 context("test make_env")
 
-assert_all_vars = function(e, var_names, include_hidden = FALSE) {
-  nameList = ls(envir = e, all.names = include_hidden)
-  expect_identical(length(nameList), length(var_names))
-  expect_true(all(var_names %in% nameList))
-}
-
-#
-# root_utility is a pacakge-level singleton
-#
-test_that("Simulate a package-level singleton object with an R env", {
-  expect_true(is.environment(root_utility))
-  assert_all_vars(root_utility, c(
-    'greet', 'ls', 'change_parent', 'name', 'self', 'change_self'
-  ))
-  expect_identical(root_utility$greet(), "self: Alice, dad: Bob")
-  assert_all_vars(parent.env(root_utility), 'dad')
-})
-
-test_that("Change variable bindings and variable lookup scopes", {
-  root_utility$change_self("Tom")
-  assert_all_vars(root_utility, c(
-    'greet', 'ls', 'change_parent', 'name', 'dad', 'self', 'change_self'
-  ))
-  expect_identical(root_utility$greet(), "self: Alice, dad: Tom")
-
-  parentEnv = parent.env(root_utility)
-  expect_identical(parentEnv$dad, "Bob")
-
-  rm('dad', envir = root_utility)
-  expect_identical(root_utility$greet(), "self: Alice, dad: Bob")
-})
-
-
 # Create a new env instance
 
 test_that("create a new env without parent reference", {
-  e = make_env(a = 3, b = "BB", private = list(pa = "PA", pb = "PB"))
-  expect_identical(e[['self']], e)
-  assert_all_vars(e, c('a', 'b', 'self'))
+  e = make_env(public = list(
+    a = 3L, b = "BB",
+    get_private = function(key) {
+      private = parent.env(parent.env(environment()))
+      private[[key]]
+    },
+    get_public = function(key) {
+      public = parent.env(environment())
+      public[[key]]
+    }),
+    private = list(pa = "PA", pb = "PB"),
+    add_self_ref = F,
+    add_private_ref = F
+  )
 
-  pe = parent.env(e)
-  expect_null(e[['.private']])
-  assert_all_vars(pe, c('pa', 'pb'))
+  expect_null(e$.self)
+  expect_null(e$.private)
+
+  expect_identical(e$a, 3L)
+  expect_identical(e$get_public('a'), 3L)
+  expect_identical(e$b, 'BB')
+  expect_identical(e$get_public('b'), 'BB')
+
+  # private fields are hidden in the public env
+  expect_null(e$pa)
+  expect_identical(e$get_private('pa'), 'PA')
+  expect_identical(e$get_private('pb'), 'PB')
 })
 
 test_that("create a new env without parent reference", {
-  e = make_env(a = 3, b = "BB", private = list(pa = "PA", pb = "PB"), add_parent_ref = T)
-  expect_identical(e[['self']], e)
-  assert_all_vars(e, c('a', 'b', 'self'))
-  assert_all_vars(e, c('a', 'b', 'self', '.private'), include_hidden = T)
+  e = make_env(public = list(a=3), private = list(b='B'))
+  expect_identical(is.null(e[['.self']]), F)
+  expect_identical(is.null(e[['.private']]), F)
 
-  pe = parent.env(e)
-  expect_identical(e[['.private']], pe)
-  assert_all_vars(pe, c('pa', 'pb'))
+  e = make_env(public = list(a=3), private = list(b='B'), add_self_ref = F, add_private_ref = F)
+  expect_identical(is.null(e[['.self']]), T)
+  expect_identical(is.null(e[['.private']]), T)
+
+  e = make_env(public = list(a=3), private = list(b='B'), add_self_ref = T, add_private_ref = F)
+  expect_identical(is.null(e[['.self']]), F)
+  expect_identical(is.null(e[['.private']]), T)
 })
 
 test_that("create a new env, lock_env but not lock_binding", {
-  e = make_env(a = 3, b = 4, lock_env = T, lock_binding = F)
+  e = make_env(public = list(a=3), private = list(b='B'), lock_env = T, lock_binding = F)
   expect_error({e$extra = "extra"}, "cannot add bindings")
   e$a = 'A'
   expect_identical(e$a, 'A')
 })
 
 test_that("create a new locked env, lock_binding but not lock_env", {
-  e = make_env(a = 3, b = 4, lock_env = F, lock_binding = T)
+  # e = make_env(public = list(a = 3, b = 4), private = list(), lock_env = F, lock_binding = T)
+  e = make_env(public = list(a = 3, b = 4), lock_env = F, lock_binding = T)
   e$extra = "extra"
   expect_identical(e$extra, 'extra')
   expect_error({e$a = "A"}, "cannot change value")
 })
 
 test_that("create a new locked env, lock_binding and lock_env", {
-  e = make_env(a = 3, b = 4, lock_env = T, lock_binding = T)
+  e = make_env(public = list(a = 3, b = 4), lock_env = T, lock_binding = T)
   expect_error({e$extra = "extra"}, "cannot add bindings")
   expect_error({e$a = "A"}, "cannot change value")
 })
 
+
+test_that("instances do not share initial fields", {
+  counter = 1
+
+  get_env = function() {
+    result = new.env(parent =  emptyenv())
+    result[['value']] = letters[[counter]]
+    counter <<- counter +1
+    result
+  }
+
+
+  e1 = make_env(public = list(field = get_env(), get_field_value = function() {field[['value']]} ) )
+  e2 = make_env(public = list(field = get_env(), get_field_value = function() {field[['value']]} ) )
+  # 'field' are different in e1 and e2
+  expect_true(e1$get_field_value() != e2$get_field_value())
+
+  # shared public list
+  public = list(
+    field = get_env(),
+    get_field_value = function() field[['value']],
+    change_value = function(v) field[['value']] <- v
+    )
+  e3 = make_env(public = public)
+  e4 = make_env(public = public)
+
+  expect_true(e3$get_field_value() == e4$get_field_value())
+  e3$change_value('changed')
+  expect_true(e3$get_field_value() == e4$get_field_value())
+  expect_true(e4$get_field_value() == 'changed')
+
+
+})

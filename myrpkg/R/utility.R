@@ -2,26 +2,39 @@
 #'
 #' Use the returned env to simulate a singleton with static methods
 #' @export
-make_env = function(..., private = baseenv(), add_parent_ref = FALSE, lock_env = FALSE, lock_binding = FALSE){
-  return_list = list(...)
+make_env = function(public = list(), private = list(), add_self_ref = TRUE, add_private_ref = TRUE, lock_env = FALSE, lock_binding = FALSE){
+  return_list = public
+
+  move_funcs_to_env = function(e) {
+    is_name_func = function(name) is.function(e[[name]])
+    funcNames = Filter(is_name_func, ls(e, all.names = TRUE))
+    sapply(funcNames, function(x) {
+      environment(e[[x]]) <- e
+    })
+  }
 
   parentEnv = if(is.list(private)) {
     list2env(private, parent = baseenv())
-  } else if(is.environment(private)) {
-    private
   } else {
-    stop("ERROR: make_env: param 'private' must be an R env or named list, but got: [%s]", paste(class(private), collapse = ","))
+    stop("ERROR: make_env: param 'private' must be a named list, but got: [%s]", paste(class(private), collapse = ","))
   }
-  result = list2env(return_list, parent = parentEnv)
+  result = if(is.list(public))  {
+    list2env(public, parent = parentEnv)
+  } else if(is.environment(public)) {
+    parent.env(public) <- parentEnv
+    public
+  } else { stop("ERROR: make_env: param 'public' must be a named list or R env") }
 
-  for (name in ls(result)) {
-    if(is.function(result[[name]])){
-      environment(result[[name]]) <- result
-    }
+  move_funcs_to_env(result)
+  move_funcs_to_env(parentEnv)
+
+  if(add_self_ref){
+    result[[".self"]] <- result
+    parentEnv[['.self']] <- result
   }
-  result[["self"]] <- result
-  if(add_parent_ref){
+  if(add_private_ref){
     result[[".private"]] <- parentEnv
+    parentEnv[[".private"]] <- parentEnv
   }
   if(lock_env || lock_binding){
     # we cannot add new variables to a locked env
@@ -38,21 +51,23 @@ make_env = function(..., private = baseenv(), add_parent_ref = FALSE, lock_env =
 
 #' @export
 root_utility = make_env(
-  greet = function() {
-    sprintf("self: %s, dad: %s", name, dad)
-  },
-  ls = function() {
-    # Without the base:: prefix, ls will be first found in the root env,
-    # which will cause an error of 'unused arguments'; otherwise infinite recursion
-    base::ls(envir = self)
-  },
-  change_parent = function(value) {
-    parent.env(self)$dad = value
-  },
-  change_self = function(value) {
-    self$dad = value
-  },
-  name = "Alice",
+  public = list(
+    greet = function() {
+      sprintf("self: %s, dad: %s", name, dad)
+    },
+    ls = function() {
+      # Without the base:: prefix, ls will be first found in the root env,
+      # which will cause an error of 'unused arguments'; otherwise infinite recursion
+      base::ls(envir = self)
+    },
+    change_parent = function(value) {
+      parent.env(self)$dad = value
+    },
+    change_self = function(value) {
+      self$dad = value
+    },
+    name = "Alice"
+  ),
   private = list(
     dad = "Bob"
   )
