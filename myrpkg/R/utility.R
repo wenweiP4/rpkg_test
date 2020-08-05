@@ -5,11 +5,11 @@
 make_env = function(public = list(), private = list(), add_self_ref = TRUE, add_private_ref = TRUE, lock_env = FALSE, lock_binding = FALSE){
   return_list = public
 
-  move_funcs_to_env = function(e) {
+  move_funcs_to_env = function(e, target_env = e) {
     is_name_func = function(name) is.function(e[[name]])
     funcNames = Filter(is_name_func, ls(e, all.names = TRUE))
     sapply(funcNames, function(x) {
-      environment(e[[x]]) <- e
+      environment(e[[x]]) <- target_env
     })
   }
 
@@ -26,7 +26,7 @@ make_env = function(public = list(), private = list(), add_self_ref = TRUE, add_
   } else { stop("ERROR: make_env: param 'public' must be a named list or R env") }
 
   move_funcs_to_env(result)
-  move_funcs_to_env(parentEnv)
+  move_funcs_to_env(parentEnv, result)
 
   if(add_self_ref){
     result[[".self"]] <- result

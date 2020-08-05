@@ -100,3 +100,45 @@ test_that("instances do not share initial fields", {
 
 
 })
+
+test_that("variables are first accessed in public space", {
+  e = make_env(
+    public = list(
+      a = 3L, b = 4L,
+      call = function(private_func_name) {
+        f = .private[[private_func_name]]
+        f()
+      }
+    ),
+    private = list(
+      a = 10L, b = 20L,
+      m = 5L, n = 6L
+      , f1 = function() a * b
+      , f2 = function() .self$a * .self$b
+      , f3 = function() .private$a * b
+      , f4 = function() m * n
+      , change_values_local = function(){
+        a = 2L
+      }
+      , change_values_self = function(){
+        .self$a = 2L
+        .private$a = 3L
+      }
+    )
+  )
+
+  expect_identical(e$call('f1'), 12L)
+  expect_identical(e$call('f2'), 12L)
+  expect_identical(e$call('f3'), 40L)
+  expect_identical(e$call('f4'), 30L)
+  expect_null(e$m)
+  expect_null(e$.self$m)
+
+  e$call('change_values_local')
+  expect_identical(e$a, 3L)
+  expect_identical(e$.private$a, 10L)
+
+  e$call('change_values_self')
+  expect_identical(e$a, 2L)
+  expect_identical(e$.private$a, 3L)
+})
