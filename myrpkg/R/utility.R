@@ -2,7 +2,15 @@
 #'
 #' Use the returned env to simulate a singleton with static methods
 #' @export
-make_env = function(public = list(), private = list(), add_self_ref = TRUE, add_private_ref = TRUE, lock_env = FALSE, lock_binding = FALSE){
+make_env = function(
+  public = list(),
+  private = list(),
+  root_env = parent.frame(),
+  add_self_ref = TRUE,
+  add_private_ref = TRUE,
+  lock_env = FALSE,
+  lock_binding = FALSE
+){
   return_list = public
 
   move_funcs_to_env = function(e, target_env = e) {
