@@ -19,6 +19,15 @@ assert_null = function(value, error_fmt = "'{.symbol}' must be NULL", .nframe = 
   assertf(is.null(value), error_fmt = glue(error_fmt), .nframe = .nframe + 1, .symbol = .symbol)
 }
 
+assert_inherits = function(value, class_names,
+  error_fmt = "{.symbol} is should inherit from one of the class(es): [{.class_names}], but got class of: {.value}",
+  .nframe = 0, .symbol = deparse(substitute(value))
+){
+  .class_names = paste(class_names, collapse = ', ')
+  .value = paste(class(value), collapse = ', ')
+  assertf(inherits(value, class_names), error_fmt = glue(error_fmt), .nframe = .nframe + 1, .symbol = .symbol)
+}
+
 
 dummy_api_function = function(a, b, m, n) {
   nested = function() {
@@ -51,6 +60,8 @@ main = function() {
 
   assert_null(obj)
   assert_null(.main.name, "param {.symbol} <> NULL, {.value}")
+
+  assert_inherits(obj, c("numeric", "data.frame"))
 
   cat("================simmulate api function==============\n")
   dummy_api_function(a = -1, b = 2, m = 3)
