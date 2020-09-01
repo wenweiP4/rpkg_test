@@ -33,7 +33,7 @@ make_env = function(
   assert_empty_or_named_list(active, "active")
 
   parentEnv = if(is.list(private)) {
-    list2env(private, parent = baseenv())
+    list2env(private, parent = root_env)
   } else {
     stop("ERROR: make_env: param 'private' must be a named list, but got: [%s]", paste(class(private), collapse = ","))
   }
