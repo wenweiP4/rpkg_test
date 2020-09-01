@@ -2,7 +2,7 @@ context("test make_env")
 
 # Create a new env instance
 
-test_that("create a new env without parent reference", {
+test_that("create a new env without references of self or private", {
   e = make_env(public = list(
     a = 3L, b = "BB",
     get_private = function(key) {
@@ -32,7 +32,7 @@ test_that("create a new env without parent reference", {
   expect_identical(e$get_private('pb'), 'PB')
 })
 
-test_that("create a new env without parent reference", {
+test_that("create a new env with self/private reference", {
   e = make_env(public = list(a=3), private = list(b='B'))
   expect_identical(is.null(e[['.self']]), F)
   expect_identical(is.null(e[['.private']]), F)
@@ -44,6 +44,24 @@ test_that("create a new env without parent reference", {
   e = make_env(public = list(a=3), private = list(b='B'), add_self_ref = T, add_private_ref = F)
   expect_identical(is.null(e[['.self']]), F)
   expect_identical(is.null(e[['.private']]), T)
+})
+
+test_that("activing binding", {
+  e = make_env(public = list(a = "A", readonly = "42"), private = list(b = "B"), active = list(
+    fa = function(value) {if(missing(value)) a else .self$a = value},
+    f_readonly = function() .self$readonly,
+    fb = function(value) {if(missing(value)) b else .private$b = value}
+  ))
+
+  expect_identical(e$fa, "A")
+  e$fa = "FA"
+  expect_identical(e$fa, "FA")
+  expect_identical(e$f_readonly, "42")
+  expect_error({e$f_readonly = 43})
+
+  expect_identical(e$fb, "B")
+  e$fb = "FB"
+  expect_identical(e$fb, "FB")
 })
 
 test_that("create a new env, lock_env but not lock_binding", {
@@ -141,4 +159,11 @@ test_that("variables are first accessed in public space", {
   e$call('change_values_self')
   expect_identical(e$a, 2L)
   expect_identical(e$.private$a, 3L)
+})
+
+test_that("Error cases", {
+  expect_error(make_env(public = "abc"), "public")
+  expect_error(make_env(public = list("abc")), "public")
+  expect_error(make_env(public = list(a = "abc", a = "a2")), "public")
+  expect_error(make_env(public = list(a = "abc", "b")), "public") # "b" doesn't have a name
 })
