@@ -3,6 +3,8 @@ assert_default_length = function(extra = 0L) {
   expect_identical(myrpkg::get_length(), 4L + as.integer(extra))
 }
 
+
+
 test_that("default_env", {
   myrpkg::connect(user = "alice")
   e = myrpkg::default_env

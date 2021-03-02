@@ -1,0 +1,60 @@
+---
+title: "quick_start"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{quick_start}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(myrpkg)
+name = "quick start"
+qs_value = 42
+```
+
+## Shared.R
+
+```{r, code = readLines("shared.R")}
+
+```
+
+## Child regular
+```{r, child="child/_child.Rmd"}
+print("what if we include code here in the parent?")
+```
+
+```{r}
+as.list(childEnv)
+```
+## Child include=F
+```{r, include=FALSE, child="child/_child.Rmd"}
+```
+```{r}
+as.list(childEnv)
+```
+
+## Self
+
+```{r}
+childEnv
+as.list(childEnv)
+
+childEnv$quick_start = T
+as.list(childEnv)
+```
+
+## Quick start
+
+```{r, background='#FF0000', collapse=TRUE, comment="commentok"}
+ls(get_default_env())
+PersonSingleton
+```
+

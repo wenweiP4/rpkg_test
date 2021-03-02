@@ -1,0 +1,39 @@
+---
+title: "another_one"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{another_one}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r}
+name = "another_one.Rmd"
+ao_value = 23
+```
+
+
+```{r, code = readLines("shared.R")}
+
+```
+
+## Child
+```{r, child="child/_child.Rmd"}
+
+```
+
+## self 
+```{r}
+childEnv
+as.list(childEnv)
+
+childEnv$another_one = T
+as.list(childEnv)
+```

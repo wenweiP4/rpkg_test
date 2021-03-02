@@ -1,0 +1,38 @@
+---
+title: "child"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{another_one}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r}
+# this is from a child Rmd
+# Here we declare a shared element
+
+childEnv = new.env()
+
+childEnv$name = sprintf("child-%s", rnorm(1))
+
+# what's in parent env ?
+
+```
+
+```{r, include=FALSE}
+childEnv$seed = rnorm(1)
+```
+
+```{r, eval=F}
+# this will be shown, but not evaluated
+stop("This would have thrown an error")
+```
+
+** End of child **
